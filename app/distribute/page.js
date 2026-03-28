@@ -23,6 +23,8 @@ export default function DistributePage() {
   const [order, setOrder] = useState(null);
   const [selected, setSelected] = useState([]);
   const [distributeLoading, setDistributeLoading] = useState(false);
+  const [selectedUndo, setSelectedUndo] = useState([]);
+  const [undoLoading, setUndoLoading] = useState(false);
   const [toast, setToast] = useState(null);
 
   // Exchange Google token for BPI JWT once session is available
@@ -62,6 +64,7 @@ export default function DistributePage() {
     setLookupError(null);
     setOrder(null);
     setSelected([]);
+    setSelectedUndo([]);
 
     try {
       const data = await apiFetch(
@@ -85,6 +88,35 @@ export default function DistributePage() {
     setSelected((prev) =>
       prev.includes(skuId) ? prev.filter((s) => s !== skuId) : [...prev, skuId]
     );
+  };
+
+  const handleUndoToggle = (skuId) => {
+    setSelectedUndo((prev) =>
+      prev.includes(skuId) ? prev.filter((s) => s !== skuId) : [...prev, skuId]
+    );
+  };
+
+  const handleUndistribute = async () => {
+    if (!selectedUndo.length || !order) return;
+    setUndoLoading(true);
+
+    try {
+      const data = await apiFetch(
+        "/merch/distributor/undistribute",
+        {
+          method: "POST",
+          body: JSON.stringify({ orderId: order.orderId, skuIds: selectedUndo }),
+        },
+        bpiJwt
+      );
+      setOrder((prev) => ({ ...prev, items: data.items }));
+      setSelectedUndo([]);
+      showToast("Distribution undone.");
+    } catch (err) {
+      showToast(err.message || "Failed to undo distribution", "error");
+    } finally {
+      setUndoLoading(false);
+    }
   };
 
   const handleDistribute = async () => {
@@ -114,6 +146,7 @@ export default function DistributePage() {
     setOtp("");
     setOrder(null);
     setSelected([]);
+    setSelectedUndo([]);
     setLookupError(null);
   };
 
@@ -193,6 +226,8 @@ export default function DistributePage() {
               items={order.items}
               selected={selected}
               onToggle={handleToggle}
+              selectedUndo={selectedUndo}
+              onUndoToggle={handleUndoToggle}
             />
 
             <div className="flex gap-3">
@@ -203,6 +238,15 @@ export default function DistributePage() {
               >
                 {distributeLoading ? "Marking..." : `Mark as Distributed (${selected.length})`}
               </button>
+              {selectedUndo.length > 0 && (
+                <button
+                  onClick={handleUndistribute}
+                  disabled={undoLoading}
+                  className="flex-1 bg-red-700 hover:bg-red-600 disabled:opacity-40 disabled:cursor-not-allowed text-white font-medium rounded-lg py-3 transition-colors"
+                >
+                  {undoLoading ? "Undoing..." : `Undo Distribution (${selectedUndo.length})`}
+                </button>
+              )}
               <button
                 onClick={handleNext}
                 className="flex-1 bg-gray-700 hover:bg-gray-600 text-white font-medium rounded-lg py-3 transition-colors"
