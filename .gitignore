@@ -44,3 +44,6 @@ next-env.d.ts
 CLAUDE.md
 Spree_Merch_Distribution_PRD.md
 tasks/
+
+# credentials
+client_secret_*.json
